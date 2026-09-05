@@ -1,0 +1,51 @@
+Project_ID,Project_Name,State,Lat,Lon,Budget_Crores,Time_Elapsed_Percent,Funds_Spent_Percent,Physical_Progress_Percent
+PUN001,Ludhiana Ring Road Expansion,Punjab,30.9010,75.8573,420,91,78,31
+PUN002,Amritsar Outer Bypass,Punjab,31.6340,74.8723,610,86,71,28
+PUN003,Patiala Urban Drainage Upgrade,Punjab,30.3398,76.3869,185,84,68,35
+PUN004,Jalandhar Freight Corridor Link,Punjab,31.3260,75.5762,530,94,82,22
+PUN005,Bathinda Water Treatment Plant,Punjab,30.2110,74.9455,275,88,64,37
+PUN006,Mohali Transit Hub,Punjab,30.7046,76.7179,360,83,73,29
+PUN007,Hoshiarpur Highway Widening,Punjab,31.5143,75.9115,315,89,67,34
+PUN008,Moga Irrigation Canal Modernization,Punjab,30.8165,75.1719,210,92,76,26
+PUN009,Ferozepur Flood Protection Scheme,Punjab,30.9331,74.6225,240,85,69,32
+PUN010,Gurdaspur Regional Bridge Project,Punjab,32.0419,75.4050,195,97,81,18
+PUN011,Rajpura Logistics Park Road,Punjab,30.4837,76.5944,340,58,72,35
+PUN012,Kapurthala Sewer Network Renewal,Punjab,31.3801,75.3817,155,52,66,24
+PUN013,Sangrur Rural Road Program,Punjab,30.2458,75.8421,205,47,63,21
+PUN014,Muktsar Canal Lining Project,Punjab,30.4764,74.5160,175,64,74,32
+PUN015,Nawanshahr Bus Terminal Upgrade,Punjab,31.1240,76.1160,95,55,61,27
+PUN016,Tarn Taran Stormwater Works,Punjab,31.4519,74.9278,130,69,68,30
+PUN017,Malerkotla Road Rehabilitation,Punjab,30.5309,75.8799,145,62,65,26
+PUN018,Phagwara Industrial Access Road,Punjab,31.2240,75.7708,220,73,79,36
+PUN019,Pathankot Reservoir Pipeline,Punjab,32.2643,75.6421,190,59,64,25
+PUN020,Abohar Agricultural Market Road,Punjab,30.1204,74.2907,125,66,70,33
+HRY001,Gurugram Metro Extension,Haryana,28.4595,77.0266,720,74,54,76
+HRY002,Faridabad Drainage Corridor,Haryana,28.4089,77.3178,315,61,47,64
+HRY003,Panipat Freight Terminal Road,Haryana,29.3909,76.9635,410,68,52,72
+HRY004,Ambala Integrated Bus Hub,Haryana,30.3782,76.7767,180,45,39,51
+HRY005,Hisar Water Supply Expansion,Haryana,29.1492,75.7217,265,57,48,63
+HRY006,Karnal Urban Road Upgrade,Haryana,29.6857,76.9905,230,63,45,68
+HRY007,Rohtak Stormwater Network,Haryana,28.8955,76.6066,195,49,36,55
+HRY008,Sonipat Industrial Bypass,Haryana,28.9931,77.0151,375,71,58,74
+HRY009,Yamunanagar Bridge Rehabilitation,Haryana,30.1290,77.2674,155,38,29,42
+HRY010,Rewari Logistics Corridor,Haryana,28.1990,76.6190,460,65,51,69
+HRY011,Sirsa Canal Modernization,Haryana,29.5349,75.0280,240,54,44,61
+HRY012,Bhiwani Rural Highway Works,Haryana,28.7930,76.1397,205,59,41,66
+HRY013,Kaithal Water Treatment Upgrade,Haryana,29.8015,76.3996,175,43,31,48
+HRY014,Jind Regional Road Improvement,Haryana,29.3158,76.3150,190,52,40,58
+HRY015,Palwal Transit Infrastructure,Haryana,28.1487,77.3320,285,67,49,71
+HRY016,Fatehabad Irrigation Renewal,Haryana,29.5130,75.4550,160,46,34,53
+HRY017,Narnaul Highway Safety Project,Haryana,28.0444,76.1080,135,35,27,41
+HRY018,Panchkula Civic Infrastructure Works,Haryana,30.6942,76.8606,210,60,43,65
+HRY019,Charkhi Dadri Road Strengthening,Haryana,28.5910,76.2700,150,41,32,47
+HRY020,Tohana Municipal Water Project,Haryana,29.7130,75.9040,145,56,38,59
+HRY021,Kurukshetra Heritage Access Roads,Haryana,29.9695,76.8783,170,48,35,52
+HRY022,Hansi Urban Drainage Project,Haryana,29.1000,75.9600,125,39,28,44
+HRY023,Shahabad Agricultural Link Road,Haryana,30.1670,76.8700,115,44,33,49
+HRY024,Gohana Rural Connectivity Scheme,Haryana,29.1370,76.7050,140,53,37,57
+HRY025,Thanesar Water Network,Haryana,29.9730,76.8320,155,62,46,67
+HRY026,Samalkha Highway Service Road,Haryana,29.2350,76.9800,130,36,25,40
+HRY027,Kalanur Flood Management Works,Haryana,28.8000,76.6000,185,58,42,62
+HRY028,Ratia Canal Distribution Upgrade,Haryana,29.6900,75.5800,150,51,39,56
+HRY029,Pehowa Rural Bridge Program,Haryana,29.9780,76.5880,120,42,30,46
+HRY030,Ladwa Road Resurfacing Project,Haryana,29.9990,77.0450,110,34,24,38

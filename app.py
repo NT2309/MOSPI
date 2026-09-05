@@ -3,38 +3,43 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+
 # =========================================================
 # PAGE CONFIG
 # =========================================================
 st.set_page_config(
     page_title="MoSPI PAIMANA Portal",
     page_icon="🏗️",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
+
 
 # =========================================================
 # CUSTOM CSS
 # =========================================================
-st.markdown("""
-<style>
-    .main-title {
-        font-size: 34px;
-        font-weight: 700;
-        margin-bottom: 0px;
-    }
+st.markdown(
+    """
+    <style>
+        .main-title {
+            font-size: 34px;
+            font-weight: 700;
+            margin-bottom: 0;
+        }
 
-    .subtitle {
-        color: #666;
-        font-size: 15px;
-    }
+        .subtitle {
+            color: #888;
+            font-size: 15px;
+        }
 
-    .alert-box {
-        padding: 15px;
-        border-radius: 10px;
-        margin-bottom: 10px;
-    }
-</style>
-""", unsafe_allow_html=True)
+        div[data-testid="stMetricValue"] {
+            font-size: 28px;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 
 # =========================================================
 # LOAD CSV
@@ -43,7 +48,6 @@ CSV_FILE = "punjab_haryana_projects.csv"
 
 if not os.path.exists(CSV_FILE):
 
-    # Also check Downloads folder for local testing
     downloads_file = os.path.join(
         os.path.expanduser("~"),
         "Downloads",
@@ -54,82 +58,158 @@ if not os.path.exists(CSV_FILE):
         CSV_FILE = downloads_file
     else:
         st.error(
-            f"❌ `{CSV_FILE}` nahi mila. "
-            "CSV ko app.py ke same folder mein rakho."
+            "CSV file nahi mila. "
+            "punjab_haryana_projects.csv ko app.py ke same folder mein rakho."
         )
         st.stop()
 
-df = pd.read_csv(CSV_FILE)
+
+try:
+    df = pd.read_csv(CSV_FILE)
+except Exception as e:
+    st.error(f"CSV load nahi ho paayi: {e}")
+    st.stop()
+
 
 # =========================================================
-# CLEAN DATA
+# REQUIRED COLUMNS CHECK
 # =========================================================
-numeric_columns = [
+required_columns = [
+    "Project_ID",
+    "Project_Name",
+    "State",
+    "Lat",
+    "Lon",
     "Budget_Crores",
     "Time_Elapsed_Percent",
     "Funds_Spent_Percent",
-    "Physical_Progress_Percent",
-    "Lat",
-    "Lon"
+    "Physical_Progress_Percent"
 ]
 
-for col in numeric_columns:
-    df[col] = pd.to_numeric(df[col], errors="coerce")
+missing_columns = [
+    column for column in required_columns
+    if column not in df.columns
+]
+
+if missing_columns:
+    st.error(
+        "CSV mein ye columns missing hain: "
+        + ", ".join(missing_columns)
+    )
+    st.stop()
+
 
 # =========================================================
-# AUTOMATIC RISK ENGINE
+# CONVERT NUMERIC COLUMNS
+# =========================================================
+numeric_columns = [
+    "Lat",
+    "Lon",
+    "Budget_Crores",
+    "Time_Elapsed_Percent",
+    "Funds_Spent_Percent",
+    "Physical_Progress_Percent"
+]
+
+for column in numeric_columns:
+    df[column] = pd.to_numeric(
+        df[column],
+        errors="coerce"
+    )
+
+
+# =========================================================
+# RISK CALCULATION
 # =========================================================
 def calculate_risk(row):
 
-    time = row["Time_Elapsed_Percent"]
-    progress = row["Physical_Progress_Percent"]
-    funds = row["Funds_Spent_Percent"]
+    time_elapsed = row["Time_Elapsed_Percent"]
+    physical_progress = row["Physical_Progress_Percent"]
+    funds_spent = row["Funds_Spent_Percent"]
 
-    risk_score = 0
+    if pd.isna(time_elapsed):
+        time_elapsed = 0
 
-    # Time-progress gap
-    if time - progress >= 30:
-        risk_score += 50
-    elif time - progress >= 15:
-        risk_score += 30
-    elif time - progress >= 5:
-        risk_score += 15
+    if pd.isna(physical_progress):
+        physical_progress = 0
 
-    # Money being spent faster than physical work
-    if funds - progress >= 25:
-        risk_score += 30
-    elif funds - progress >= 10:
-        risk_score += 15
+    if pd.isna(funds_spent):
+        funds_spent = 0
 
-    # Very low progress
-    if progress < 30:
-        risk_score += 20
+    score = 0
 
-    if risk_score >= 60:
-        return risk_score, "Critical"
-    elif risk_score >= 35:
-        return risk_score, "High"
-    elif risk_score >= 15:
-        return risk_score, "Medium"
+    # Time vs physical progress
+    time_gap = time_elapsed - physical_progress
+
+    if time_gap >= 30:
+        score += 50
+
+    elif time_gap >= 15:
+        score += 30
+
+    elif time_gap >= 5:
+        score += 15
+
+    # Funds spent vs physical progress
+    spending_gap = funds_spent - physical_progress
+
+    if spending_gap >= 25:
+        score += 30
+
+    elif spending_gap >= 10:
+        score += 15
+
+    # Low physical progress
+    if physical_progress < 30:
+        score += 20
+
+    score = min(score, 100)
+
+    if score >= 60:
+        level = "Critical"
+
+    elif score >= 35:
+        level = "High"
+
+    elif score >= 15:
+        level = "Medium"
+
     else:
-        return risk_score, "Low"
+        level = "Low"
+
+    return score, level
 
 
-risk_results = df.apply(calculate_risk, axis=1)
+risk_results = df.apply(
+    calculate_risk,
+    axis=1
+)
 
-df["Risk_Score"] = [x[0] for x in risk_results]
-df["Risk_Level"] = [x[1] for x in risk_results]
+df["Risk_Score"] = [
+    result[0] for result in risk_results
+]
+
+df["Risk_Level"] = [
+    result[1] for result in risk_results
+]
+
 
 # =========================================================
 # HEADER
 # =========================================================
-header_col1, header_col2, header_col3 = st.columns([5, 1, 1])
+header1, header2, header3 = st.columns(
+    [5, 1, 1]
+)
 
-with header_col1:
+with header1:
+
     st.markdown(
-        '<div class="main-title">🏗️ MoSPI PAIMANA Portal</div>',
+        '<div class="main-title">'
+        '🏗️ MoSPI PAIMANA Portal'
+        '</div>',
         unsafe_allow_html=True
     )
+
     st.markdown(
         '<div class="subtitle">'
         'Integrated Project Monitoring & Analytics Platform'
@@ -137,25 +217,38 @@ with header_col1:
         unsafe_allow_html=True
     )
 
-with header_col2:
-    st.write("")
+
+with header2:
 
     with st.popover("🎧 Support"):
+
         st.markdown("### 📞 Technical Helpdesk")
-        st.write("For dashboard assistance:")
+
+        st.write(
+            "For dashboard assistance or reporting discrepancies:"
+        )
+
         st.write("📧 support-paimana@mospi.gov.in")
         st.write("📞 1800-11-2026")
-        st.caption("Mon–Fri | 9:00 AM – 5:30 PM IST")
 
-with header_col3:
-    st.write("")
+        st.caption(
+            "Mon–Fri | 9:00 AM – 5:30 PM IST"
+        )
+
+
+with header3:
 
     role = st.selectbox(
         "User Type",
-        ["Government Official", "Citizen"]
+        [
+            "Government Official",
+            "Citizen"
+        ]
     )
 
+
 st.divider()
+
 
 # =========================================================
 # SIDEBAR
@@ -175,80 +268,108 @@ page = st.sidebar.radio(
 
 st.sidebar.divider()
 
-st.sidebar.caption("📊 Data Source")
-st.sidebar.write("PAIMANA Project Database")
-
-st.sidebar.caption(
-    f"Projects loaded: {len(df)}"
+st.sidebar.metric(
+    "Projects Loaded",
+    len(df)
 )
 
+st.sidebar.caption(
+    "Data Source: PAIMANA Project Dataset"
+)
+
+
 # =========================================================
-# PROJECT DETAILS DIALOG
+# PROJECT DETAILS
 # =========================================================
-@st.dialog("📋 Project Details")
 def show_project_details(row):
 
-    st.subheader(row["Project_Name"])
+    st.markdown("### 📋 Project Details")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        st.write(f"**Project ID:** {row['Project_ID']}")
-        st.write(f"**State:** {row['State']}")
-        st.write(f"**Budget:** ₹{row['Budget_Crores']} Crore")
+
         st.write(
-            f"**Physical Progress:** "
-            f"{row['Physical_Progress_Percent']}%"
+            f"**Project ID:** {row['Project_ID']}"
+        )
+
+        st.write(
+            f"**Project:** {row['Project_Name']}"
+        )
+
+        st.write(
+            f"**State:** {row['State']}"
+        )
+
+        st.write(
+            f"**Budget:** ₹{row['Budget_Crores']:,.2f} Cr"
         )
 
     with col2:
+
         st.write(
             f"**Time Elapsed:** "
-            f"{row['Time_Elapsed_Percent']}%"
+            f"{row['Time_Elapsed_Percent']:.1f}%"
         )
 
         st.write(
             f"**Funds Spent:** "
-            f"{row['Funds_Spent_Percent']}%"
+            f"{row['Funds_Spent_Percent']:.1f}%"
         )
 
         st.write(
-            f"**Risk Score:** "
-            f"{row['Risk_Score']}"
+            f"**Physical Progress:** "
+            f"{row['Physical_Progress_Percent']:.1f}%"
         )
 
         st.write(
-            f"**Risk Level:** "
-            f"{row['Risk_Level']}"
+            f"**Risk:** "
+            f"{row['Risk_Level']} "
+            f"({row['Risk_Score']}/100)"
         )
 
-    st.divider()
+    st.write("#### Physical Progress")
 
-    progress = row["Physical_Progress_Percent"]
-
-    st.write("### Project Progress")
-
-    st.progress(
-        min(max(int(progress), 0), 100)
+    progress_value = int(
+        min(
+            max(
+                row["Physical_Progress_Percent"],
+                0
+            ),
+            100
+        )
     )
 
-    # Early warning
-    if row["Risk_Level"] == "Critical":
+    st.progress(progress_value)
+
+    time_gap = (
+        row["Time_Elapsed_Percent"]
+        - row["Physical_Progress_Percent"]
+    )
+
+    if time_gap >= 30:
+
         st.error(
-            "🚨 CRITICAL: Project requires immediate monitoring."
+            f"🚨 Critical Warning: "
+            f"Physical progress is {time_gap:.1f}% "
+            f"behind the elapsed timeline."
         )
-    elif row["Risk_Level"] == "High":
+
+    elif time_gap >= 15:
+
         st.warning(
-            "⚠️ HIGH RISK: Early intervention recommended."
+            f"⚠️ Warning: "
+            f"Physical progress is {time_gap:.1f}% "
+            f"behind the elapsed timeline."
         )
-    elif row["Risk_Level"] == "Medium":
-        st.info(
-            "🟡 MEDIUM RISK: Continue close monitoring."
-        )
+
     else:
+
         st.success(
-            "🟢 LOW RISK: Project currently progressing normally."
+            "🟢 Project progress is currently "
+            "within the monitoring threshold."
         )
+
 
 # =========================================================
 # OVERVIEW
@@ -257,42 +378,52 @@ if page == "Overview":
 
     st.header("📊 Project Overview")
 
-    # -----------------------------------------------------
-    # METRICS
-    # -----------------------------------------------------
-
     total_projects = len(df)
-    total_budget = df["Budget_Crores"].sum()
-    avg_progress = df["Physical_Progress_Percent"].mean()
 
-    high_risk = len(
-        df[df["Risk_Level"].isin(["High", "Critical"])]
+    total_budget = df[
+        "Budget_Crores"
+    ].sum()
+
+    average_progress = df[
+        "Physical_Progress_Percent"
+    ].mean()
+
+    high_risk_projects = len(
+        df[
+            df["Risk_Level"].isin(
+                ["High", "Critical"]
+            )
+        ]
     )
 
-    c1, c2, c3, c4 = st.columns(4)
+    col1, col2, col3, col4 = st.columns(4)
 
-    with c1:
+    with col1:
+
         st.metric(
             "Total Projects",
-            total_projects
+            f"{total_projects:,}"
         )
 
-    with c2:
+    with col2:
+
         st.metric(
             "Total Budget",
-            f"₹{total_budget:,.2f} Cr"
+            f"₹{total_budget:,.0f} Cr"
         )
 
-    with c3:
+    with col3:
+
         st.metric(
             "Avg Physical Progress",
-            f"{avg_progress:.1f}%"
+            f"{average_progress:.1f}%"
         )
 
-    with c4:
+    with col4:
+
         st.metric(
-            "High/Critical Risk",
-            high_risk
+            "High / Critical Risk",
+            f"{high_risk_projects:,}"
         )
 
     st.divider()
@@ -300,7 +431,6 @@ if page == "Overview":
     # -----------------------------------------------------
     # STATE SUMMARY
     # -----------------------------------------------------
-
     st.subheader("🇮🇳 State-wise Project Summary")
 
     state_summary = (
@@ -308,10 +438,20 @@ if page == "Overview":
         .agg(
             Projects=("Project_ID", "count"),
             Budget_Cr=("Budget_Crores", "sum"),
-            Avg_Progress=("Physical_Progress_Percent", "mean"),
-            Avg_Funds_Spent=("Funds_Spent_Percent", "mean")
+            Avg_Progress=(
+                "Physical_Progress_Percent",
+                "mean"
+            ),
+            Avg_Funds_Spent=(
+                "Funds_Spent_Percent",
+                "mean"
+            )
         )
         .reset_index()
+    )
+
+    state_summary["Budget_Cr"] = (
+        state_summary["Budget_Cr"].round(2)
     )
 
     state_summary["Avg_Progress"] = (
@@ -322,33 +462,45 @@ if page == "Overview":
         state_summary["Avg_Funds_Spent"].round(1)
     )
 
-    st.dataframe(
-        state_summary,
-        use_container_width=True,
-        hide_index=True
+    display_summary = state_summary.rename(
+        columns={
+            "State": "State",
+            "Projects": "Projects",
+            "Budget_Cr": "Budget (₹ Cr)",
+            "Avg_Progress": "Avg Progress (%)",
+            "Avg_Funds_Spent": "Avg Funds Spent (%)"
+        }
     )
 
-    # -----------------------------------------------------
-    # STATE CHART
-    # -----------------------------------------------------
+    # Non-clickable table
+    st.table(display_summary)
 
+    # -----------------------------------------------------
+    # PROJECT COUNT CHART
+    # -----------------------------------------------------
     fig = px.bar(
         state_summary,
         x="State",
         y="Projects",
-        title="Projects by State",
-        text="Projects"
+        text="Projects",
+        title="Projects by State"
+    )
+
+    fig.update_traces(
+        textposition="outside"
     )
 
     fig.update_layout(
         xaxis_title="State",
-        yaxis_title="Number of Projects"
+        yaxis_title="Number of Projects",
+        height=420
     )
 
     st.plotly_chart(
         fig,
         use_container_width=True
     )
+
 
 # =========================================================
 # STATE-WISE MONITORING
@@ -357,7 +509,12 @@ elif page == "State-wise Monitoring":
 
     st.header("🗺️ State-wise Project Monitoring")
 
-    states = sorted(df["State"].dropna().unique())
+    states = sorted(
+        df["State"]
+        .dropna()
+        .unique()
+        .tolist()
+    )
 
     selected_state = st.selectbox(
         "Select State",
@@ -365,40 +522,58 @@ elif page == "State-wise Monitoring":
     )
 
     if selected_state == "All States":
+
         state_df = df.copy()
+
     else:
+
         state_df = df[
             df["State"] == selected_state
         ].copy()
 
     # -----------------------------------------------------
-    # STATE METRICS
+    # METRICS
     # -----------------------------------------------------
+    col1, col2, col3, col4 = st.columns(4)
 
-    c1, c2, c3, c4 = st.columns(4)
+    with col1:
 
-    with c1:
         st.metric(
             "Projects",
-            len(state_df)
+            f"{len(state_df):,}"
         )
 
-    with c2:
+    with col2:
+
+        budget_value = state_df[
+            "Budget_Crores"
+        ].sum()
+
         st.metric(
             "Budget",
-            f"₹{state_df['Budget_Crores'].sum():,.2f} Cr"
+            f"₹{budget_value:,.0f} Cr"
         )
 
-    with c3:
+    with col3:
+
+        progress_value = state_df[
+            "Physical_Progress_Percent"
+        ].mean()
+
         st.metric(
             "Physical Progress",
-            f"{state_df['Physical_Progress_Percent'].mean():.1f}%"
+            f"{progress_value:.1f}%"
         )
 
-    with c4:
+    with col4:
+
+        funds_value = state_df[
+            "Funds_Spent_Percent"
+        ].mean()
+
         st.metric(
             "Funds Spent",
-            f"{state_df['Funds_Spent_Percent'].mean():.1f}%"
+            f"{funds_value:.1f}%"
         )
 
     st.divider()
@@ -406,35 +581,41 @@ elif page == "State-wise Monitoring":
     # -----------------------------------------------------
     # MAP
     # -----------------------------------------------------
-
     st.subheader("📍 Project Locations")
 
     map_df = state_df.dropna(
         subset=["Lat", "Lon"]
     )
 
-    if len(map_df) > 0:
+    if not map_df.empty:
 
         fig_map = px.scatter_map(
             map_df,
             lat="Lat",
             lon="Lon",
             hover_name="Project_Name",
-            hover_data=[
-                "Project_ID",
-                "State",
-                "Budget_Crores",
-                "Physical_Progress_Percent",
-                "Risk_Level"
-            ],
+            hover_data={
+                "Project_ID": True,
+                "State": True,
+                "Budget_Crores": ":.2f",
+                "Physical_Progress_Percent": ":.1f",
+                "Risk_Level": True,
+                "Lat": False,
+                "Lon": False
+            },
             color="Risk_Level",
-            zoom=4,
-            height=500
+            zoom=5,
+            height=520
         )
 
         fig_map.update_layout(
             map_style="open-street-map",
-            margin={"r": 0, "t": 0, "l": 0, "b": 0}
+            margin={
+                "r": 0,
+                "t": 0,
+                "l": 0,
+                "b": 0
+            }
         )
 
         st.plotly_chart(
@@ -442,29 +623,83 @@ elif page == "State-wise Monitoring":
             use_container_width=True
         )
 
-    # -----------------------------------------------------
-    # PROJECT TABLE
-    # -----------------------------------------------------
+    else:
 
+        st.info(
+            "No geographical coordinates available."
+        )
+
+    # -----------------------------------------------------
+    # PROJECT CARDS
+    # -----------------------------------------------------
     st.subheader("📋 Projects")
 
-    display_columns = [
-        "Project_ID",
-        "Project_Name",
-        "State",
-        "Budget_Crores",
-        "Time_Elapsed_Percent",
-        "Funds_Spent_Percent",
-        "Physical_Progress_Percent",
-        "Risk_Score",
-        "Risk_Level"
-    ]
+    for index, row in state_df.reset_index(
+        drop=True
+    ).iterrows():
 
-    st.dataframe(
-        state_df[display_columns],
-        use_container_width=True,
-        hide_index=True
-    )
+        with st.container(border=True):
+
+            col1, col2, col3, col4 = st.columns(
+                [4, 2, 2, 1]
+            )
+
+            with col1:
+
+                st.markdown(
+                    f"**{row['Project_Name']}**"
+                )
+
+                st.caption(
+                    f"{row['Project_ID']} • "
+                    f"{row['State']}"
+                )
+
+            with col2:
+
+                st.write(
+                    f"Progress: "
+                    f"**{row['Physical_Progress_Percent']:.1f}%**"
+                )
+
+            with col3:
+
+                st.write(
+                    f"Risk: **{row['Risk_Level']}**"
+                )
+
+                st.caption(
+                    f"Score: {row['Risk_Score']}/100"
+                )
+
+            with col4:
+
+                details_key = (
+                    "state_details_"
+                    + str(row["Project_ID"])
+                    + "_"
+                    + str(index)
+                )
+
+                if st.button(
+                    "Details",
+                    key=details_key
+                ):
+
+                    st.session_state[
+                        "selected_project_id"
+                    ] = row["Project_ID"]
+
+            # Show details directly on page
+            if (
+                st.session_state.get(
+                    "selected_project_id"
+                )
+                == row["Project_ID"]
+            ):
+
+                show_project_details(row)
+
 
 # =========================================================
 # RISK & ALERTS
@@ -474,116 +709,114 @@ elif page == "Risk & Alerts":
     st.header("🚨 Risk & Early Warning Centre")
 
     st.write(
-        "AI-ready rule-based risk engine identifies projects "
-        "requiring early intervention."
+        "Automated monitoring engine identifies "
+        "projects requiring early intervention."
     )
-
-    # -----------------------------------------------------
-    # RISK COUNTS
-    # -----------------------------------------------------
 
     risk_counts = (
         df["Risk_Level"]
         .value_counts()
         .reindex(
-            ["Critical", "High", "Medium", "Low"],
+            [
+                "Critical",
+                "High",
+                "Medium",
+                "Low"
+            ],
             fill_value=0
         )
     )
 
-    c1, c2, c3, c4 = st.columns(4)
+    col1, col2, col3, col4 = st.columns(4)
 
-    with c1:
+    with col1:
+
         st.metric(
             "🚨 Critical",
-            risk_counts["Critical"]
+            int(risk_counts["Critical"])
         )
 
-    with c2:
+    with col2:
+
         st.metric(
             "🔴 High",
-            risk_counts["High"]
+            int(risk_counts["High"])
         )
 
-    with c3:
+    with col3:
+
         st.metric(
             "🟡 Medium",
-            risk_counts["Medium"]
+            int(risk_counts["Medium"])
         )
 
-    with c4:
+    with col4:
+
         st.metric(
             "🟢 Low",
-            risk_counts["Low"]
+            int(risk_counts["Low"])
         )
 
     st.divider()
 
-    # -----------------------------------------------------
-    # ALERTS
-    # -----------------------------------------------------
-
-    critical_df = df[
-        df["Risk_Level"].isin(["Critical", "High"])
+    alert_df = df[
+        df["Risk_Level"].isin(
+            ["Critical", "High"]
+        )
     ].sort_values(
         "Risk_Score",
         ascending=False
     )
 
-    st.subheader("⚠️ Projects Requiring Attention")
+    st.subheader(
+        "⚠️ Projects Requiring Attention"
+    )
 
-    if len(critical_df) == 0:
+    if alert_df.empty:
 
         st.success(
-            "No high-risk projects detected."
+            "🟢 No high-risk projects detected."
         )
 
     else:
 
-        for _, row in critical_df.iterrows():
+        for _, row in alert_df.iterrows():
 
             if row["Risk_Level"] == "Critical":
 
                 st.error(
-                    f"🚨 **{row['Project_Name']}** | "
+                    f"🚨 {row['Project_Name']} | "
                     f"{row['State']} | "
-                    f"Risk Score: {row['Risk_Score']}"
+                    f"Risk Score: "
+                    f"{row['Risk_Score']}/100"
                 )
 
             else:
 
                 st.warning(
-                    f"⚠️ **{row['Project_Name']}** | "
+                    f"⚠️ {row['Project_Name']} | "
                     f"{row['State']} | "
-                    f"Risk Score: {row['Risk_Score']}"
+                    f"Risk Score: "
+                    f"{row['Risk_Score']}/100"
                 )
 
-            with st.expander("View warning details"):
+            time_gap = (
+                row["Time_Elapsed_Percent"]
+                - row["Physical_Progress_Percent"]
+            )
 
-                st.write(
-                    f"**Time elapsed:** "
-                    f"{row['Time_Elapsed_Percent']}%"
-                )
+            spending_gap = (
+                row["Funds_Spent_Percent"]
+                - row["Physical_Progress_Percent"]
+            )
 
-                st.write(
-                    f"**Physical progress:** "
-                    f"{row['Physical_Progress_Percent']}%"
-                )
+            st.caption(
+                f"Time-progress gap: "
+                f"{time_gap:.1f}% | "
+                f"Funds-progress gap: "
+                f"{spending_gap:.1f}%"
+            )
 
-                st.write(
-                    f"**Funds spent:** "
-                    f"{row['Funds_Spent_Percent']}%"
-                )
-
-                gap = (
-                    row["Time_Elapsed_Percent"]
-                    - row["Physical_Progress_Percent"]
-                )
-
-                st.write(
-                    f"**Time vs Progress Gap:** "
-                    f"{gap:.1f}%"
-                )
 
 # =========================================================
 # ANALYTICS
@@ -593,10 +826,11 @@ elif page == "Analytics":
     st.header("📈 Comparative Analytics")
 
     # -----------------------------------------------------
-    # CHART 1
+    # TIME VS PROGRESS
     # -----------------------------------------------------
-
-    st.subheader("⏱️ Time Elapsed vs Physical Progress")
+    st.subheader(
+        "⏱️ Time Elapsed vs Physical Progress"
+    )
 
     fig1 = px.scatter(
         df,
@@ -605,7 +839,10 @@ elif page == "Analytics":
         size="Budget_Crores",
         color="Risk_Level",
         hover_name="Project_Name",
-        hover_data=["State", "Project_ID"],
+        hover_data=[
+            "Project_ID",
+            "State"
+        ],
         title="Project Progress Performance"
     )
 
@@ -615,7 +852,9 @@ elif page == "Analytics":
         y0=0,
         x1=100,
         y1=100,
-        line=dict(dash="dash")
+        line=dict(
+            dash="dash"
+        )
     )
 
     st.plotly_chart(
@@ -624,15 +863,16 @@ elif page == "Analytics":
     )
 
     st.info(
-        "Projects below the diagonal line have physical progress "
-        "behind the elapsed project timeline."
+        "Projects below the diagonal line are "
+        "progressing slower than their elapsed timeline."
     )
 
     # -----------------------------------------------------
-    # CHART 2
+    # FUNDS VS PROGRESS
     # -----------------------------------------------------
-
-    st.subheader("💰 Funds Spent vs Physical Progress")
+    st.subheader(
+        "💰 Funds Spent vs Physical Progress"
+    )
 
     fig2 = px.scatter(
         df,
@@ -641,6 +881,9 @@ elif page == "Analytics":
         size="Budget_Crores",
         color="State",
         hover_name="Project_Name",
+        hover_data=[
+            "Project_ID"
+        ],
         title="Financial vs Physical Progress"
     )
 
@@ -650,10 +893,11 @@ elif page == "Analytics":
     )
 
     # -----------------------------------------------------
-    # CHART 3
+    # STATE COMPARISON
     # -----------------------------------------------------
-
-    st.subheader("🏗️ State-wise Performance")
+    st.subheader(
+        "🏛️ State-wise Performance"
+    )
 
     performance = (
         df.groupby("State")
@@ -686,6 +930,7 @@ elif page == "Analytics":
         use_container_width=True
     )
 
+
 # =========================================================
 # PROJECT SEARCH
 # =========================================================
@@ -694,74 +939,122 @@ elif page == "Project Search":
     st.header("🔎 Project Search")
 
     search = st.text_input(
-        "Search Project Name / Project ID / State"
+        "Search by Project Name, Project ID or State",
+        placeholder="e.g. Punjab / Haryana / P001"
     )
 
-    filtered = df.copy()
+    filtered_df = df.copy()
 
-    if search:
+    if search.strip():
 
-        search_lower = search.lower()
+        search_text = search.strip().lower()
 
-        filtered = filtered[
-            filtered["Project_Name"]
+        filtered_df = filtered_df[
+            filtered_df["Project_Name"]
             .astype(str)
             .str.lower()
-            .str.contains(search_lower)
+            .str.contains(
+                search_text,
+                na=False
+            )
             |
-            filtered["Project_ID"]
+            filtered_df["Project_ID"]
             .astype(str)
             .str.lower()
-            .str.contains(search_lower)
+            .str.contains(
+                search_text,
+                na=False
+            )
             |
-            filtered["State"]
+            filtered_df["State"]
             .astype(str)
             .str.lower()
-            .str.contains(search_lower)
+            .str.contains(
+                search_text,
+                na=False
+            )
         ]
 
     st.write(
-        f"Found **{len(filtered)}** project(s)"
+        f"Found **{len(filtered_df)}** project(s)"
     )
 
-    # -----------------------------------------------------
-    # PROJECT CARDS
-    # -----------------------------------------------------
+    if filtered_df.empty:
 
-    for index, row in filtered.iterrows():
+        st.warning(
+            "No matching projects found."
+        )
 
-        with st.container(border=True):
+    else:
 
-            c1, c2, c3, c4 = st.columns(
-                [4, 2, 2, 1]
-            )
+        for index, row in filtered_df.reset_index(
+            drop=True
+        ).iterrows():
 
-            with c1:
-                st.markdown(
-                    f"### {row['Project_Name']}"
-                )
-                st.caption(
-                    f"{row['Project_ID']} • {row['State']}"
+            with st.container(border=True):
+
+                col1, col2, col3, col4 = st.columns(
+                    [4, 2, 2, 1]
                 )
 
-            with c2:
-                st.write(
-                    f"**Progress**\n\n"
-                    f"{row['Physical_Progress_Percent']}%"
-                )
+                with col1:
 
-            with c3:
-                st.write(
-                    f"**Risk**\n\n"
-                    f"{row['Risk_Level']}"
-                )
+                    st.markdown(
+                        f"**{row['Project_Name']}**"
+                    )
 
-            with c4:
-                if st.button(
-                    "Details",
-                    key=f"search_{index}"
-                ):
-                    show_project_details(row)
+                    st.caption(
+                        f"{row['Project_ID']} • "
+                        f"{row['State']}"
+                    )
+
+                with col2:
+
+                    st.write(
+                        "Progress"
+                    )
+
+                    st.write(
+                        f"**{row['Physical_Progress_Percent']:.1f}%**"
+                    )
+
+                with col3:
+
+                    st.write(
+                        "Risk"
+                    )
+
+                    st.write(
+                        f"**{row['Risk_Level']}**"
+                    )
+
+                with col4:
+
+                    search_key = (
+                        "search_details_"
+                        + str(row["Project_ID"])
+                        + "_"
+                        + str(index)
+                    )
+
+                    if st.button(
+                        "Details",
+                        key=search_key
+                    ):
+
+                        st.session_state[
+                            "search_selected_project"
+                        ] = row["Project_ID"]
+
+            if (
+                st.session_state.get(
+                    "search_selected_project"
+                )
+                == row["Project_ID"]
+            ):
+
+                show_project_details(row)
+
 
 # =========================================================
 # FOOTER

@@ -44,28 +44,26 @@ st.markdown(
 # =========================================================
 # LOAD CSV
 # =========================================================
-CSV_FILE = "punjab_haryana_projects(1).csv"
-LEGACY_CSV_FILE = "punjab_haryana_projects.csv"
-
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 
-candidate_files = [
-    os.path.join(APP_DIR, CSV_FILE),
-    os.path.join(APP_DIR, LEGACY_CSV_FILE),
-    os.path.join(os.path.expanduser("~"), "Downloads", CSV_FILE),
-    os.path.join(os.path.expanduser("~"), "Downloads", LEGACY_CSV_FILE),
+CSV_CANDIDATES = [
+    os.path.join(APP_DIR, "punjab_haryana_projects(1).csv"),
+    os.path.join(APP_DIR, "punjab_haryana_projects.csv"),
+    os.path.join(os.path.expanduser("~"), "Downloads", "punjab_haryana_projects(1).csv"),
+    os.path.join(os.path.expanduser("~"), "Downloads", "punjab_haryana_projects.csv"),
 ]
 
-found_csv = next((path for path in candidate_files if os.path.isfile(path)), None)
+CSV_FILE = next(
+    (path for path in CSV_CANDIDATES if os.path.exists(path)),
+    None
+)
 
-if found_csv is None:
+if CSV_FILE is None:
     st.error(
-        "CSV file nahi mili. App ke same folder mein "
-        f'"{CSV_FILE}" ya "{LEGACY_CSV_FILE}" rakho.'
+        "CSV file nahi mila. "
+        "punjab_haryana_projects(1).csv ko app.py ke same folder mein rakho."
     )
     st.stop()
-
-CSV_FILE = found_csv
 
 
 try:
@@ -242,13 +240,77 @@ with header2:
 
 with header3:
 
+    language = st.selectbox(
+        "Language / भाषा / ਭਾਸ਼ਾ",
+        ["English", "हिन्दी", "ਪੰਜਾਬੀ"]
+    )
+
+    role_labels = {
+        "English": ["Government Official", "Citizen"],
+        "हिन्दी": ["सरकारी अधिकारी", "नागरिक"],
+        "ਪੰਜਾਬੀ": ["ਸਰਕਾਰੀ ਅਧਿਕਾਰੀ", "ਨਾਗਰਿਕ"]
+    }
+
     role = st.selectbox(
         "User Type",
-        [
-            "Government Official",
-            "Citizen"
-        ]
+        role_labels[language]
     )
+
+    translations = {
+        "English": {
+            "overview": "Project Overview",
+            "state": "State-wise Monitoring",
+            "risk": "Risk & Alerts",
+            "analytics": "Comparative Analytics",
+            "search": "Project Search",
+            "projects_state": "Projects by State",
+            "number_projects": "Number of Projects",
+            "select_state": "Select State",
+            "all_states": "All States",
+            "locations": "Project Locations",
+            "projects": "Projects",
+            "budget": "Budget",
+            "progress": "Physical Progress",
+            "funds": "Funds Spent",
+            "search_label": "Search by Project Name, Project ID or State",
+        },
+        "हिन्दी": {
+            "overview": "परियोजना अवलोकन",
+            "state": "राज्यवार निगरानी",
+            "risk": "जोखिम और चेतावनी",
+            "analytics": "तुलनात्मक विश्लेषण",
+            "search": "परियोजना खोज",
+            "projects_state": "राज्यवार परियोजनाएँ",
+            "number_projects": "परियोजनाओं की संख्या",
+            "select_state": "राज्य चुनें",
+            "all_states": "सभी राज्य",
+            "locations": "परियोजना स्थान",
+            "projects": "परियोजनाएँ",
+            "budget": "बजट",
+            "progress": "भौतिक प्रगति",
+            "funds": "व्यय की गई राशि",
+            "search_label": "परियोजना नाम, ID या राज्य से खोजें",
+        },
+        "ਪੰਜਾਬੀ": {
+            "overview": "ਪ੍ਰੋਜੈਕਟ ਓਵਰਵਿਊ",
+            "state": "ਰਾਜ-ਵਾਰ ਨਿਗਰਾਨੀ",
+            "risk": "ਖਤਰਾ ਅਤੇ ਚੇਤਾਵਨੀਆਂ",
+            "analytics": "ਤੁਲਨਾਤਮਕ ਵਿਸ਼ਲੇਸ਼ਣ",
+            "search": "ਪ੍ਰੋਜੈਕਟ ਖੋਜ",
+            "projects_state": "ਰਾਜ-ਵਾਰ ਪ੍ਰੋਜੈਕਟ",
+            "number_projects": "ਪ੍ਰੋਜੈਕਟਾਂ ਦੀ ਗਿਣਤੀ",
+            "select_state": "ਰਾਜ ਚੁਣੋ",
+            "all_states": "ਸਾਰੇ ਰਾਜ",
+            "locations": "ਪ੍ਰੋਜੈਕਟ ਸਥਾਨ",
+            "projects": "ਪ੍ਰੋਜੈਕਟ",
+            "budget": "ਬਜਟ",
+            "progress": "ਭੌਤਿਕ ਪ੍ਰਗਤੀ",
+            "funds": "ਖਰਚ ਕੀਤੇ ਫੰਡ",
+            "search_label": "ਪ੍ਰੋਜੈਕਟ ਨਾਮ, ID ਜਾਂ ਰਾਜ ਨਾਲ ਖੋਜੋ",
+        }
+    }
+
+    t = translations[language]
 
 
 st.divider()
@@ -259,15 +321,22 @@ st.divider()
 # =========================================================
 st.sidebar.title("📌 Navigation")
 
-page = st.sidebar.radio(
+page_options = [
+    ("Overview", t["overview"]),
+    ("State-wise Monitoring", t["state"]),
+    ("Risk & Alerts", t["risk"]),
+    ("Analytics", t["analytics"]),
+    ("Project Search", t["search"])
+]
+
+page_label = st.sidebar.radio(
     "Go to",
-    [
-        "Overview",
-        "State-wise Monitoring",
-        "Risk & Alerts",
-        "Analytics",
-        "Project Search"
-    ]
+    [label for _, label in page_options]
+)
+
+page = next(
+    internal for internal, label in page_options
+    if label == page_label
 )
 
 st.sidebar.divider()
@@ -380,7 +449,7 @@ def show_project_details(row):
 # =========================================================
 if page == "Overview":
 
-    st.header("📊 Project Overview")
+    st.header("📊 " + t["overview"])
 
     total_projects = len(df)
 
@@ -435,7 +504,7 @@ if page == "Overview":
     # -----------------------------------------------------
     # STATE SUMMARY
     # -----------------------------------------------------
-    st.subheader("🇮🇳 State-wise Project Summary")
+    st.subheader("🇮🇳 " + t["projects_state"])
 
     state_summary = (
         df.groupby("State")
@@ -483,7 +552,8 @@ if page == "Overview":
     # PROJECT COUNT CHART
     # -----------------------------------------------------
     state_summary["Projects"] = pd.to_numeric(
-        state_summary["Projects"], errors="coerce"
+        state_summary["Projects"],
+        errors="coerce"
     ).fillna(0).astype(int)
 
     max_projects = int(state_summary["Projects"].max()) if not state_summary.empty else 0
@@ -494,30 +564,108 @@ if page == "Overview":
         x="State",
         y="Projects",
         text="Projects",
-        title="Projects by State",
-        range_y=[0, y_max]
+        title=t["projects_state"]
     )
 
     fig.update_traces(
         textposition="outside",
-        cliponaxis=False
+        cliponaxis=False,
+        hovertemplate="<b>%{x}</b><br>" + t["number_projects"] + ": %{y}<extra></extra>"
     )
 
     fig.update_layout(
         xaxis_title="State",
-        yaxis_title="Number of Projects",
+        yaxis_title=t["number_projects"],
         height=420,
+        autosize=True,
         margin=dict(t=70, b=50, l=50, r=30),
+        dragmode="zoom",
         yaxis=dict(
             range=[0, y_max],
-            dtick=5 if y_max <= 50 else None
-        )
+            dtick=5 if y_max <= 50 else None,
+            fixedrange=False
+        ),
+        xaxis=dict(fixedrange=False)
     )
 
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
+    # Important: keep the chart inside the normal Streamlit frame.
+    # Clicking a bar will NOT open/expand the chart; users can zoom/pan with Plotly controls.
+    # Keep the chart compact and add a horizontal state slider below it.
+    # This is especially useful when more states/categories are added later.
+    chart_col = st.container()
+
+    with chart_col:
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config={
+                "displayModeBar": True,
+                "displaylogo": False,
+                "scrollZoom": True,
+                "doubleClick": "reset",
+                "responsive": True,
+                "modeBarButtonsToRemove": ["lasso2d", "select2d"]
+            }
+        )
+
+        if len(state_summary) > 2:
+            st.markdown("**Slide to view states →**")
+
+            state_start, state_end = st.slider(
+                "State range",
+                min_value=0,
+                max_value=len(state_summary) - 1,
+                value=(0, len(state_summary) - 1),
+                step=1,
+                label_visibility="collapsed",
+                key="overview_state_slider"
+            )
+
+            visible_states = state_summary.iloc[
+                state_start:state_end + 1
+            ].copy()
+
+            fig_slider = px.bar(
+                visible_states,
+                x="State",
+                y="Projects",
+                text="Projects",
+                title=None
+            )
+
+            fig_slider.update_traces(
+                textposition="outside",
+                cliponaxis=False,
+                hovertemplate="<b>%{x}</b><br>" + t["number_projects"] + ": %{y}<extra></extra>"
+            )
+
+            fig_slider.update_layout(
+                height=380,
+                margin=dict(t=20, b=50, l=50, r=30),
+                xaxis_title="State",
+                yaxis_title=t["number_projects"],
+                yaxis=dict(
+                    range=[0, y_max],
+                    dtick=5 if y_max <= 50 else None,
+                    fixedrange=False
+                ),
+                xaxis=dict(fixedrange=False),
+                dragmode="zoom"
+            )
+
+            st.plotly_chart(
+                fig_slider,
+                use_container_width=True,
+                config={
+                    "displayModeBar": True,
+                    "displaylogo": False,
+                    "scrollZoom": True,
+                    "doubleClick": "reset",
+                    "responsive": True,
+                    "modeBarButtonsToRemove": ["lasso2d", "select2d"]
+                },
+                key="overview_state_slider_chart"
+            )
 
 
 # =========================================================
@@ -525,7 +673,7 @@ if page == "Overview":
 # =========================================================
 elif page == "State-wise Monitoring":
 
-    st.header("🗺️ State-wise Project Monitoring")
+    st.header("🗺️ " + t["state"])
 
     states = sorted(
         df["State"]
@@ -535,11 +683,11 @@ elif page == "State-wise Monitoring":
     )
 
     selected_state = st.selectbox(
-        "Select State",
-        ["All States"] + states
+        t["select_state"],
+        [t["all_states"]] + states
     )
 
-    if selected_state == "All States":
+    if selected_state == t["all_states"]:
 
         state_df = df.copy()
 
@@ -557,7 +705,7 @@ elif page == "State-wise Monitoring":
     with col1:
 
         st.metric(
-            "Projects",
+            t["projects"],
             f"{len(state_df):,}"
         )
 
@@ -568,7 +716,7 @@ elif page == "State-wise Monitoring":
         ].sum()
 
         st.metric(
-            "Budget",
+            t["budget"],
             f"₹{budget_value:,.0f} Cr"
         )
 
@@ -579,7 +727,7 @@ elif page == "State-wise Monitoring":
         ].mean()
 
         st.metric(
-            "Physical Progress",
+            t["progress"],
             f"{progress_value:.1f}%"
         )
 
@@ -590,7 +738,7 @@ elif page == "State-wise Monitoring":
         ].mean()
 
         st.metric(
-            "Funds Spent",
+            t["funds"],
             f"{funds_value:.1f}%"
         )
 
@@ -599,7 +747,7 @@ elif page == "State-wise Monitoring":
     # -----------------------------------------------------
     # MAP
     # -----------------------------------------------------
-    st.subheader("📍 Project Locations")
+    st.subheader("📍 " + t["locations"])
 
     map_df = state_df.dropna(
         subset=["Lat", "Lon"]
@@ -841,7 +989,7 @@ elif page == "Risk & Alerts":
 # =========================================================
 elif page == "Analytics":
 
-    st.header("📈 Comparative Analytics")
+    st.header("📈 " + t["analytics"])
 
     # -----------------------------------------------------
     # TIME VS PROGRESS
@@ -954,10 +1102,10 @@ elif page == "Analytics":
 # =========================================================
 elif page == "Project Search":
 
-    st.header("🔎 Project Search")
+    st.header("🔎 " + t["search"])
 
     search = st.text_input(
-        "Search by Project Name, Project ID or State",
+        t["search_label"],
         placeholder="e.g. Punjab / Haryana / P001"
     )
 

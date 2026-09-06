@@ -770,12 +770,17 @@ elif page == "State-wise Monitoring":
                 "Lon": False
             },
             color="Risk_Level",
-            zoom=5,
+            center={
+                "lat": float(map_df["Lat"].mean()),
+                "lon": float(map_df["Lon"].mean())
+            },
+            zoom=7,
             height=520
         )
 
         fig_map.update_layout(
             map_style="open-street-map",
+            dragmode="pan",
             margin={
                 "r": 0,
                 "t": 0,
@@ -786,7 +791,14 @@ elif page == "State-wise Monitoring":
 
         st.plotly_chart(
             fig_map,
-            use_container_width=True
+            use_container_width=True,
+            config={
+                "displayModeBar": True,
+                "displaylogo": False,
+                "scrollZoom": True,
+                "doubleClick": "reset",
+                "responsive": True
+            }
         )
 
     else:

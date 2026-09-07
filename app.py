@@ -1092,20 +1092,78 @@ elif page == "Analytics":
         .reset_index()
     )
 
+    st.markdown("### 📊 State-wise Physical Progress")
     fig3 = px.bar(
         performance,
         x="State",
-        y=[
-            "Physical_Progress",
-            "Funds_Spent"
-        ],
-        barmode="group",
-        title="State-wise Physical Progress vs Funds Spent"
+        y="Physical_Progress",
+        text="Physical_Progress",
+        title="State-wise Physical Progress"
     )
-
+    fig3.update_traces(
+        texttemplate="%{text:.1f}%",
+        textposition="outside",
+        cliponaxis=False,
+        hovertemplate="<b>%{x}</b><br>Physical Progress: %{y:.1f}%<extra></extra>"
+    )
+    fig3.update_layout(
+        xaxis_title="State",
+        yaxis_title="Physical Progress (%)",
+        height=420,
+        margin=dict(t=70, b=50, l=50, r=30),
+        dragmode="zoom",
+        yaxis=dict(range=[0, 100], fixedrange=False),
+        xaxis=dict(fixedrange=False)
+    )
     st.plotly_chart(
         fig3,
-        use_container_width=True
+        use_container_width=True,
+        config={
+            "displayModeBar": True,
+            "displaylogo": False,
+            "scrollZoom": True,
+            "doubleClick": "reset",
+            "responsive": True,
+            "modeBarButtonsToRemove": ["lasso2d", "select2d"]
+        },
+        key="state_physical_progress_chart"
+    )
+
+    st.markdown("### 💰 State-wise Funds Spent")
+    fig4 = px.bar(
+        performance,
+        x="State",
+        y="Funds_Spent",
+        text="Funds_Spent",
+        title="State-wise Funds Spent"
+    )
+    fig4.update_traces(
+        texttemplate="%{text:.1f}%",
+        textposition="outside",
+        cliponaxis=False,
+        hovertemplate="<b>%{x}</b><br>Funds Spent: %{y:.1f}%<extra></extra>"
+    )
+    fig4.update_layout(
+        xaxis_title="State",
+        yaxis_title="Funds Spent (%)",
+        height=420,
+        margin=dict(t=70, b=50, l=50, r=30),
+        dragmode="zoom",
+        yaxis=dict(range=[0, 100], fixedrange=False),
+        xaxis=dict(fixedrange=False)
+    )
+    st.plotly_chart(
+        fig4,
+        use_container_width=True,
+        config={
+            "displayModeBar": True,
+            "displaylogo": False,
+            "scrollZoom": True,
+            "doubleClick": "reset",
+            "responsive": True,
+            "modeBarButtonsToRemove": ["lasso2d", "select2d"]
+        },
+        key="state_funds_spent_chart"
     )
 
 

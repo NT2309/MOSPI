@@ -541,27 +541,94 @@ elif page == t["risk"]:
 elif page == t["analytics"]:
     st.header("📈 Analytics")
 
-    st.subheader("⏱️ Time Elapsed vs Physical Progress")
+    st.subheader("⏱️ Time Elapsed vs Physical Progress — Trend")
 
-    fig1 = px.scatter(
-        df,
-        x="Time Elapsed Percent",
-        y="Physical Progress Percent",
-        hover_name="Project Name",
-        hover_data={
-            "Project ID": True,
-            "Fund Spent Percent": ":.1f",
-            "Budget": ":.2f",
-        },
-        title="Time Elapsed vs Physical Progress",
+    # Create 10% time-elapsed bands so the trend is structured and readable.
+    trend_df = df[
+        ["Time Elapsed Percent", "Physical Progress Percent"]
+    ].dropna().copy()
+
+    bins = list(range(0, 101, 10))
+    labels = [f"{i}-{i + 10}%" for i in range(0, 100, 10)]
+
+    trend_df["Time Band"] = pd.cut(
+        trend_df["Time Elapsed Percent"].clip(0, 100),
+        bins=bins,
+        labels=labels,
+        include_lowest=True,
+        right=True,
     )
+
+    progress_trend = (
+        trend_df.groupby("Time Band", observed=False)["Physical Progress Percent"]
+        .agg(["mean", "count"])
+        .reset_index()
+    )
+
+    progress_trend.columns = [
+        "Time Band",
+        "Average Physical Progress",
+        "Project Count",
+    ]
+
+    # Middle of each band gives a clean x-coordinate for the line.
+    progress_trend["Time Midpoint"] = [
+        i + 5 for i in range(0, 100, 10)
+    ]
+
+    fig1 = px.line(
+        progress_trend,
+        x="Time Midpoint",
+        y="Average Physical Progress",
+        markers=True,
+        title="Average Physical Progress by Time Elapsed",
+        hover_data={
+            "Time Midpoint": False,
+            "Average Physical Progress": ":.1f",
+            "Project Count": True,
+        },
+    )
+
+    fig1.update_traces(
+        line=dict(width=4),
+        marker=dict(size=9),
+        hovertemplate=(
+            "<b>Time Band: %{customdata[1]}</b><br>"
+            "Average Physical Progress: %{y:.1f}%<br>"
+            "Projects: %{customdata[0]:,}"
+            "<extra></extra>"
+        ),
+    )
+
+    # Add the actual band labels to hover data explicitly.
+    fig1.data[0].customdata = [
+        [count, band]
+        for count, band in zip(
+            progress_trend["Project Count"],
+            progress_trend["Time Band"].astype(str),
+        )
+    ]
+
     fig1.update_layout(
         xaxis_title="Time Elapsed (%)",
-        yaxis_title="Physical Progress (%)",
-        xaxis=dict(range=[0, 100]),
-        yaxis=dict(range=[0, 100]),
+        yaxis_title="Average Physical Progress (%)",
+        xaxis=dict(
+            range=[0, 100],
+            tickmode="array",
+            tickvals=[5, 15, 25, 35, 45, 55, 65, 75, 85, 95],
+            ticktext=labels,
+            fixedrange=False,
+        ),
+        yaxis=dict(
+            range=[0, 100],
+            dtick=20,
+            fixedrange=False,
+        ),
         height=500,
+        margin=dict(t=70, b=90, l=60, r=30),
+        hovermode="x",
     )
+
     st.plotly_chart(
         fig1,
         use_container_width=True,
@@ -570,7 +637,9 @@ elif page == t["analytics"]:
             "displaylogo": False,
             "scrollZoom": True,
             "doubleClick": "reset",
+            "responsive": True,
         },
+        key="time_physical_trend",
     )
 
     st.subheader("💰 Funds Spent vs Physical Progress")
